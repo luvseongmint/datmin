@@ -1,0 +1,78 @@
+---
+title: "UTS DMKM"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Input data
+```{r}
+flag <- read.csv("E:/Semester 5/UTS/dmkm/flag.data", header=FALSE)
+View(flag)
+```
+
+akan dilakukan prediksi agama (v7) dengan ID3 berdasarkan landmass (v2), zone (v3), language (v6), warna (v11-v17), mainhue (v18)
+
+## Memanggil library
+```{r}
+library(party)
+library(psych)
+library(caret)
+```
+
+## Eliminasi data yang tidak diperlukan
+```{r}
+flag_clean<-flag[,-c(1,4,5,8:10,19:30)]
+View(flag_clean)
+```
+
+tidak ada missing value, tidak diperlukan cleaning data
+
+## Konversi data menjadi faktor
+```{r}
+for(i in names(flag_clean)){
+  flag_clean[,i]=as.factor(flag_clean[,i])
+}
+str(flag_clean)
+```
+
+## Memisahkan data training dan data testing
+```{r}
+set.seed(123)
+sample<-sample(2,nrow(flag_clean),replace=T,prob=c(0.8,0.2))
+flag_train<-flag_clean[sample==1,]
+flag_test<-flag_clean[sample==2,]
+print(paste("Jumlah data training: ", nrow(flag_train)))
+print(paste("Jumlah data testing: ", nrow(flag_test)))
+flag_train
+flag_test
+```
+
+Data training adalah 80% dari seluruh data dan 20% sisanya adalah data testing
+
+## Model decision tree
+```{r}
+tree<-ctree(V7~., data=flag_train)
+plot(tree)
+```
+
+## Pruning tree
+```{r}
+pruntree<-ctree(V7~., data=flag_train, controls=ctree_control(mincriterion = 0.99))
+plot(pruntree)
+```
+
+## Confusion matrix
+### Tree sebelum pruning
+```{r}
+tree_pred<-predict(tree, flag_test)
+confusionMatrix(table(tree_pred,flag_test$V7))
+```
+
+### Tree setelah pruning
+```{r}
+tree_pred2<-predict(pruntree, flag_test)
+confusionMatrix(table(tree_pred2,flag_test$V7))
+```
